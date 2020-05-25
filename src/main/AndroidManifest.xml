@@ -1,0 +1,35 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.mapscloud.track">
+
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <!-- android 9.0 将后台服务转为前台服务的权限 -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <application>
+
+        <service
+            android:name="com.mapscloud.track.services.model.TrackRecordingService"
+            android:enabled="false">
+
+            <intent-filter>
+                <action android:name="com.mapscloud.track.services.model.ITrackRecordingService" />
+            </intent-filter>
+
+            <meta-data
+                android:name="com.mapscloud.track.services.version"
+                android:value="@integer/track_core_version" />
+        </service>
+
+        <!-- authorities的值不能改变，MyTracksProvider类中可查看，且所有app获取轨迹db的uri开头都是它 -->
+        <provider
+            android:name="com.mapscloud.track.services.provider.MyTracksProvider"
+            android:authorities="${applicationId}"
+            android:exported="true"
+            android:multiprocess="true" />
+    </application>
+</manifest>
