@@ -35,10 +35,12 @@ import android.os.Environment;
 import android.text.TextUtils;
 import android.util.Log;
 
+import com.dtt.app.logging.LogUtils;
 import com.mapscloud.track.R;
 import com.mapscloud.track.services.content.TrackPointsColumns;
 import com.mapscloud.track.services.content.TracksColumns;
 import com.mapscloud.track.services.tracks.WaypointsColumns;
+import com.mapscloud.track.services.utils.Constant;
 import com.mapscloud.track.services.utils.PreferencesUtils;
 
 import java.io.File;
@@ -603,6 +605,10 @@ public class MyTracksProvider extends ContentProvider {
                 Log.e(TAG, "provider checkDBNotNull方法 Unable to open database for writing. Exception = " + e.getMessage());
             }
         }
+        if (db != null){
+            LogUtils.e(Constant.TAG, "当前数据库版本 = " + db.getVersion());
+        }
+
         return db != null;
     }
 

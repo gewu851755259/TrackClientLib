@@ -100,3 +100,19 @@
         mTrackDataHub.loadTrack(mTrack.id);
 
  **具体使用可参考 JYDXT 项目中的 TracksMapFragment.java 文件**
+
+## 三、 问题记录
+
+### 3.1 轨迹表中增加了记录这条轨迹的应用名称和包名两个字段，经常导致向此表中插入数据失败
+
+简单解决：删除掉mapplus/app/app.db，重新运行
+
+代码解决：考虑数据库表升级
+
+### 3.2 目标版本设为29后，在新建轨迹记录时利用ContentResolver向轨迹记录表插入数据返回Uri为null，导致空指针异常
+
+问题原因：创建app.db文件失败，报读写权限异常
+
+解决: application属性中增加拓展文件可读
+
+   android:requestLegacyExternalStorage="true"

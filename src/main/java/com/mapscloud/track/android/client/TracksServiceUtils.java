@@ -52,12 +52,12 @@ public class TracksServiceUtils {
             // 直接调用run方法还是同步执行，没有创建新线程，不知道实例化Runnable的具体意义在哪
             if (bindChangedCallback != null)
                 bindChangedCallback.run();
-            Log.e(Constant.TAG, "轨迹服务连接");
+            Log.e(Constant.TAG, "服务控制塔: 轨迹服务连接");
         }
 
         @Override
         public void onTrackDisconnected() {
-            Log.e(Constant.TAG, "轨迹服务中断");
+            Log.e(Constant.TAG, "服务控制塔: 轨迹服务中断");
 
 //            stopTracking();
         }
@@ -71,7 +71,7 @@ public class TracksServiceUtils {
     private TracksServiceUtils(Context context) {
         this.context = context;
 
-        LocalPropertiesUtils.loadTrackPropertiesFile();
+//        LocalPropertiesUtils.loadTrackPropertiesFile();
 
         serviceMgr = new ControlTower(context);
 
@@ -102,9 +102,13 @@ public class TracksServiceUtils {
         }
     }
 
-//    public void init(ControlTower controlTower) {
-//        this.serviceMgr = controlTower;
-//    }
+    /**
+     * 在Application中初始化
+     * @param context 绑定服务的进程
+     */
+    public static void init(Context context) {
+        getTracksServiceUtilsInstance(context);
+    }
 
 
     /**
@@ -305,7 +309,7 @@ public class TracksServiceUtils {
     public void setTrackId(long mTrackId) {
         this.mTrackId = mTrackId;
         PreferencesUtils
-                .setLong(context, R.string.recording_track_id_key, PreferencesUtils.RECORDING_TRACK_ID_DEFAULT);
+                .setLong(context, appId + R.string.recording_track_id_key, PreferencesUtils.RECORDING_TRACK_ID_DEFAULT);
     }
 
     public boolean isRecording() {

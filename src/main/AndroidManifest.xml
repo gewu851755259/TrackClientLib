@@ -25,7 +25,7 @@
                 android:value="@integer/track_core_version" />
         </service>
 
-        <!-- authorities的值不能改变，MyTracksProvider类中可查看，且所有app获取轨迹db的uri开头都是它 -->
+        <!-- authorities的值为使用轨迹服务的app的包名，在app的build.gradle中需配置applicationId -->
         <provider
             android:name="com.mapscloud.track.services.provider.MyTracksProvider"
             android:authorities="${applicationId}"

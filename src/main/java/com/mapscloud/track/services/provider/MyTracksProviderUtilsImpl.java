@@ -16,13 +16,16 @@
 
 package com.mapscloud.track.services.provider;
 
+import android.annotation.SuppressLint;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 import android.location.Location;
 import android.net.Uri;
+import android.os.Environment;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -40,6 +43,8 @@ import com.mapscloud.track.services.tracks.Sensor;
 import com.mapscloud.track.services.tracks.WaypointsColumns;
 import com.mapscloud.track.services.utils.LocationUtils;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -413,6 +418,7 @@ public class MyTracksProviderUtilsImpl implements MyTracksProviderUtils {
 
     @Override
     public Uri insertTrack(Track track) {
+        checkDBNotNull();
         return contentResolver.insert(MyTracksProvider.TRACKS_CONTENT_URI, createContentValues(track));
     }
 
@@ -1346,4 +1352,31 @@ public class MyTracksProviderUtilsImpl implements MyTracksProviderUtils {
                                  String whereClause, String[] whereArgs) {
         contentResolver.update(MyTracksProvider.TRACKS_CONTENT_URI, values, whereClause, whereArgs);
     }
+
+
+    /**
+     * 检测mapplus/app/app.db文件是否为空，如果为空重新创建
+     *
+     * @return
+     */
+    private boolean checkDBNotNull() {
+        File sdcardDir = Environment.getExternalStorageDirectory();
+        File databaseFile = new File(sdcardDir, "mapplus/app/app.db");
+        if (!databaseFile.exists()) {
+            try {
+                // yml 这里可能因为mapplus/app/app.db文件不存在，先保证文件存在
+                if (!databaseFile.exists()) {
+                    File parentFile = databaseFile.getParentFile();
+                    if (!parentFile.exists())
+                        parentFile.mkdirs();
+                    databaseFile.createNewFile();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+                Log.e(TAG, "利用ContentResolver操作数据库表检测db文件为空后重新创建错误", e);
+            }
+        }
+        return databaseFile.exists();
+    }
+
 }

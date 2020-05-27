@@ -57,7 +57,7 @@ android {
                 }
                 pom.groupId = "com.mapscloud.trackservice"// 唯一标识（通常为模块包名，也可以任意）
                 pom.artifactId = "track-client-lib" // 项目名称（通常为类库模块名称，也可以任意）
-                pom.version = "1.2.4" // 版本号
+                pom.version = "1.2.5" // 版本号
             }
         }
     }
@@ -71,8 +71,7 @@ dependencies {
     implementation 'com.jakewharton.timber:timber:4.7.1'
 
     //TODO
-    api project(':BaseAppLib')
-
-//    api 'com.mapscloud.baseapp:base-app-lib:1.0.24'
+//    api project(':BaseAppLib')
+    api 'com.mapscloud.baseapp:base-app-lib:1.0.24'
 
 }

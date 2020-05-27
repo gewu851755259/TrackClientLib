@@ -42,7 +42,7 @@ public class ControlTower {
     private ITrackRecordingService trackServices;
     private final IBinder.DeathRecipient deathRecipient = () -> {
         notifyTowerDisconnected();
-        Log.e(Constant.TAG, "绑定服务异常断开");
+        Log.e(Constant.TAG, "服务控制塔: 销毁监听监测到轨迹服务异常断开");
     };
 
     // 记录服务是否连接着的状态值
@@ -59,8 +59,8 @@ public class ControlTower {
             // 注意: ITrackRecordingService实例化的asInterface方法，通过Binder对象构造
             trackServices = ITrackRecordingService.Stub.asInterface(service);
 
-            Log.e(Constant.TAG, "trackConnection onServiceConnected mPackage = "
-                    + className.getPackageName() + ", mClass = " + className.getClassName());
+            Log.e(Constant.TAG, "服务控制塔: 绑定成功，服务所在的app = "
+                    + className.getPackageName() + ", 服务全路径 = " + className.getClassName());
 
             try {
                 trackServices.asBinder().linkToDeath(deathRecipient, 0);
@@ -70,7 +70,7 @@ public class ControlTower {
                 e.printStackTrace();
                 notifyTowerDisconnected();
 
-                Log.e(Constant.TAG, "trackConnection onServiceConnected catch = " + e.toString());
+                Log.e(Constant.TAG, "服务控制塔: 轨迹服务注册销毁监听时异常 = " + e.toString());
             }
 
         }
@@ -79,8 +79,8 @@ public class ControlTower {
         public void onServiceDisconnected(ComponentName className) {
             isServiceConnecting.set(false);
             notifyTowerDisconnected();
-            Log.e(Constant.TAG, "trackConnection onServiceDisconnected mPackage = "
-                    + className.getPackageName() + ", mClass = " + className.getClassName());
+            Log.e(Constant.TAG, "服务控制塔: 绑定失败，服务所在的app = "
+                    + className.getPackageName() + ", 服务全路径 = " + className.getClassName());
         }
     };
 
@@ -142,7 +142,7 @@ public class ControlTower {
             final Intent serviceIntent = getAvailableServicesInstance(context);
             boolean isBindSuccess = context.bindService(serviceIntent, trackConnection,
                     Context.BIND_AUTO_CREATE);
-            Log.e(Constant.TAG, "isBindSuccess = " + isBindSuccess);
+            Log.e(Constant.TAG, "服务控制塔: isBindSuccess = " + isBindSuccess);
             isServiceConnecting.set(isBindSuccess);
         }
     }

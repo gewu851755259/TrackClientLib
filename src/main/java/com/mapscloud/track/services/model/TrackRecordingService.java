@@ -45,6 +45,7 @@ import android.util.Log;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.TaskStackBuilder;
 
+import com.amap.api.location.AMapLocation;
 import com.dtt.signal.SignalManager1;
 import com.mapscloud.track.R;
 import com.mapscloud.track.services.content.DescriptionGeneratorImpl;
@@ -85,9 +86,9 @@ import timber.log.Timber;
  */
 public class TrackRecordingService extends Service {
 
-    private static final String TAG             = TrackRecordingService.class.getSimpleName();
-    public static final  double PAUSE_LATITUDE  = 100.0;
-    public static final  double RESUME_LATITUDE = 200.0;
+    private static final String TAG = TrackRecordingService.class.getSimpleName();
+    public static final double PAUSE_LATITUDE = 100.0;
+    public static final double RESUME_LATITUDE = 200.0;
 
     // One second in milliseconds
     private static final long ONE_SECOND = 1000;
@@ -97,34 +98,34 @@ public class TrackRecordingService extends Service {
     static final int MAX_AUTO_RESUME_TRACK_RETRY_ATTEMPTS = 3;
 
     // The following variables are set in onCreate:
-    private Context                 context;
-    private MyTracksProviderUtils   myTracksProviderUtils;
+    private Context context;
+    private MyTracksProviderUtils myTracksProviderUtils;
     private MyTracksLocationManager myTracksLocationManager;
-    private PeriodicTaskExecutor    voiceExecutor;
-    private PeriodicTaskExecutor    splitExecutor;
-    private ExecutorService         executorService;
-    private SharedPreferences       sharedPreferences;
+    private PeriodicTaskExecutor voiceExecutor;
+    private PeriodicTaskExecutor splitExecutor;
+    private ExecutorService executorService;
+    private SharedPreferences sharedPreferences;
     /**
      * 原轨迹数据库开启后只能记录的一条的id
      * 现改为ConcurrentHashMap来保存多个app同时开启轨迹的id
      * {@link #trackIds}
      */
-    private long                    recordingTrackId;
-    private boolean                 recordingTrackPaused;
-    private LocationListenerPolicy  locationListenerPolicy;
-    private int                     minRecordingDistance;
-    private int                     maxRecordingDistance;
-    private int                     minRequiredAccuracy;
-    private int                     autoResumeTrackTimeout;
-    private long                    currentRecordingInterval;
+    private long recordingTrackId;
+    private boolean recordingTrackPaused;
+    private LocationListenerPolicy locationListenerPolicy;
+    private int minRecordingDistance;
+    private int maxRecordingDistance;
+    private int minRequiredAccuracy;
+    private int autoResumeTrackTimeout;
+    private long currentRecordingInterval;
 
     // The following variables are set when recording:
     private TripStatisticsUpdater trackTripStatisticsUpdater;
     private TripStatisticsUpdater markerTripStatisticsUpdater;
-    private WakeLock              wakeLock;
-    private SensorManager         sensorManager;
-    private Location              lastLocation;
-    private boolean               currentSegmentHasLocation;
+    private WakeLock wakeLock;
+    private SensorManager sensorManager;
+    private Location lastLocation;
+    private boolean currentSegmentHasLocation;
 
     // Timer to periodically invoke checkLocationListener
     private final Timer timer = new Timer();
@@ -136,11 +137,11 @@ public class TrackRecordingService extends Service {
     private ServiceBinder binder = new ServiceBinder(this);
 
     // 记录开启轨迹的应用集合，键为applicationId，值为当前开启的轨迹id
-    private HashSet<String>          appIds       = new HashSet<>();
-    private HashMap<String, Long>    trackIds     = new HashMap<>();
+    private HashSet<String> appIds = new HashSet<>();
+    private HashMap<String, Long> trackIds = new HashMap<>();
     private HashMap<String, Boolean> trackPauseds = new HashMap<>();
-    private String                   common_id;
-    private String                   common_paused;
+    private String common_id;
+    private String common_paused;
 
     /*
      * Note that sharedPreferenceChangeListener cannot be an anonymous inner
@@ -173,7 +174,7 @@ public class TrackRecordingService extends Service {
             // 客户端暂停、继续、开始时会刷新一次轨迹Id值
             if (key != null && key.contains(common_id)) {
                 long trackId = PreferencesUtils.getLong(context, key);
-                int  index   = key.indexOf(common_id);
+                int index = key.indexOf(common_id);
                 if (index > 0) {
                     String appId = key.substring(0, index);
                     Timber.e("OnSharedPreferenceChangeListener { appId : %s, trackId : %d }",
@@ -435,8 +436,8 @@ public class TrackRecordingService extends Service {
 //        }
 
         for (String appId : appIds) {
-            long  recordingTrackId = trackIds.get(appId);
-            Track track            = myTracksProviderUtils.getTrack(recordingTrackId);
+            long recordingTrackId = trackIds.get(appId);
+            Track track = myTracksProviderUtils.getTrack(recordingTrackId);
             if (track != null) { // 如果已经存在轨迹，继续之前的轨迹
                 restartTrackWithId(track, appId, recordingTrackId);
             } else { // 如果轨迹是空的，显示轨迹服务启动通知，并且如果recordingTrackId不为-1，需要将SharedPreferences中置为-1和暂停状态
@@ -600,7 +601,7 @@ public class TrackRecordingService extends Service {
         }
 
         WaypointType waypointType = waypointCreationRequest.getType();
-        boolean      isStatistics = waypointType == WaypointType.STATISTICS;
+        boolean isStatistics = waypointType == WaypointType.STATISTICS;
 
         // Get name
         String name;
@@ -622,8 +623,8 @@ public class TrackRecordingService extends Service {
 
         // Get tripStatistics, description, and icon
         TripStatistics tripStatistics;
-        String         description;
-        String         icon;
+        String description;
+        String icon;
         if (isStatistics) {
             long now = System.currentTimeMillis();
             markerTripStatisticsUpdater.updateTime(now);
@@ -640,8 +641,8 @@ public class TrackRecordingService extends Service {
         }
 
         // Get length and duration
-        double   length;
-        long     duration;
+        double length;
+        long duration;
         Location location = getLastValidTrackPointInCurrentSegment(recordingTrackId);
         if (location != null && trackTripStatisticsUpdater != null) {
             TripStatistics stats = trackTripStatisticsUpdater
@@ -755,9 +756,15 @@ public class TrackRecordingService extends Service {
         markerTripStatisticsUpdater = new TripStatisticsUpdater(now);
 
         // Insert a track
-        Track track   = new Track();
-        Uri   uri     = myTracksProviderUtils.insertTrack(track);
-        long  trackId = Long.parseLong(uri.getLastPathSegment());
+        Track track = new Track();
+        Uri uri = null;
+        try {
+            uri = myTracksProviderUtils.insertTrack(track);
+        } catch (Exception e) {
+            e.printStackTrace();
+            Timber.e("ContentResolver插入新轨迹错误：%s", e.toString());
+        }
+        long trackId = Long.parseLong(uri.getLastPathSegment());
         Timber.e("insert_track trackId = %d, url = %s", trackId, uri.toString());
         if (!TextUtils.isEmpty(appId)) {
             appIds.add(appId);
@@ -821,7 +828,7 @@ public class TrackRecordingService extends Service {
         trackTripStatisticsUpdater = new TripStatisticsUpdater(
                 tripStatistics.getStartTime());
 
-        long     markerStartTime;
+        long markerStartTime;
         Waypoint waypoint = myTracksProviderUtils.getLastWaypoint(trackId, WaypointType.STATISTICS);
         if (waypoint != null && waypoint.tripStatistics != null) {
             markerStartTime = waypoint.tripStatistics.getStopTime();
@@ -988,8 +995,8 @@ public class TrackRecordingService extends Service {
         }
 
         // Need to remember the recordingTrackId before setting it to -1L
-        long    trackId = recordingTrackId;
-        boolean paused  = recordingTrackPaused;
+        long trackId = recordingTrackId;
+        boolean paused = recordingTrackPaused;
 
         // Update shared preferences
         updateRecordingState(PreferencesUtils.RECORDING_TRACK_ID_DEFAULT, true);
@@ -1014,8 +1021,8 @@ public class TrackRecordingService extends Service {
         }
 
         // Need to remember the recordingTrackId before setting it to -1L
-        long    trackId = trackIds.get(appId);
-        boolean paused  = trackPauseds.get(appId);
+        long trackId = trackIds.get(appId);
+        boolean paused = trackPauseds.get(appId);
 
         // Update shared preferences
         appIds.remove(appId);
@@ -1319,7 +1326,7 @@ public class TrackRecordingService extends Service {
                 }
 
                 Location lastValidTrackPoint = getLastValidTrackPointInCurrentSegment(track.id);
-                long     idleTime            = 0L;
+                long idleTime = 0L;
                 if (lastValidTrackPoint != null
                         && location.getTime() > lastValidTrackPoint.getTime()) {
                     idleTime = location.getTime() - lastValidTrackPoint.getTime();
@@ -1360,8 +1367,21 @@ public class TrackRecordingService extends Service {
                     return;
                 }
 
-                double distanceToLastTrackLocation = location
-                        .distanceTo(lastValidTrackPoint);
+                double distanceToLastTrackLocation;
+                if (location instanceof AMapLocation) {
+                    String provider = ((AMapLocation) location).getProvider();
+                    double lat = ((AMapLocation) location).getLatitude();
+                    double lng = ((AMapLocation) location).getLongitude();
+                    float bearing = ((AMapLocation) location).getBearing();
+
+                    Location androidLocation = new Location(provider);
+                    androidLocation.setLatitude(lat);
+                    androidLocation.setLongitude(lng);
+                    androidLocation.setBearing(bearing);
+                    distanceToLastTrackLocation = androidLocation.distanceTo(lastValidTrackPoint);
+                } else {
+                    distanceToLastTrackLocation = location.distanceTo(lastValidTrackPoint);
+                }
                 Timber.e("%s 定位点信息，lat = %f， lon = %f, 距上次定位点距离 = %f", appId,
                         location.getLatitude(), location.getLongitude(), distanceToLastTrackLocation);
                 if (distanceToLastTrackLocation < minRecordingDistance
@@ -1685,7 +1705,7 @@ public class TrackRecordingService extends Service {
      */
     private static class ServiceBinder extends ITrackRecordingService.Stub {
         private TrackRecordingService trackRecordingService;
-        private DeathRecipient        deathRecipient;
+        private DeathRecipient deathRecipient;
 
         public ServiceBinder(TrackRecordingService trackRecordingService) {
             this.trackRecordingService = trackRecordingService;
