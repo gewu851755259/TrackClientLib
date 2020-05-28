@@ -4,16 +4,20 @@ import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
+import android.database.Cursor;
+import android.location.Location;
 import android.os.AsyncTask;
 import android.os.RemoteException;
 import android.text.TextUtils;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.dtt.app.area.Mercator;
 import com.mapscloud.track.R;
 import com.mapscloud.track.android.interfaces.TowerListener;
 import com.mapscloud.track.services.basic.BasicRecordBean;
 import com.mapscloud.track.services.content.Track;
+import com.mapscloud.track.services.content.TrackPointsColumns;
 import com.mapscloud.track.services.model.ITrackRecordingService;
 import com.mapscloud.track.services.model.TrackRecordingServiceConnectionUtils;
 import com.mapscloud.track.services.model.Waypoint;
@@ -104,6 +108,7 @@ public class TracksServiceUtils {
 
     /**
      * 在Application中初始化
+     *
      * @param context 绑定服务的进程
      */
     public static void init(Context context) {
@@ -365,10 +370,21 @@ public class TracksServiceUtils {
 
     /**
      * 获取全部轨迹列表
-     * @param listener
+     *
+     * @param listener 查询结果返回监听
      */
-    public void getAllTracks(RecordQueryListener listener){
-        new RecordQueryAsyncTask(listener).execute();
+    public void getAllTracks(RecordQueryListener listener) {
+        getAllTracks(listener, true);
+    }
+
+    /**
+     * 获取全部轨迹列表
+     *
+     * @param isSelfApp 是否只查询本APP的轨迹记录
+     * @param listener  查询结果返回监听
+     */
+    public void getAllTracks(RecordQueryListener listener, boolean isSelfApp) {
+        new RecordQueryAsyncTask(listener, isSelfApp).execute();
     }
 
     public interface RecordQueryListener {
@@ -378,9 +394,15 @@ public class TracksServiceUtils {
     class RecordQueryAsyncTask extends AsyncTask<String, Void, List<BasicRecordBean>> {
 
         private RecordQueryListener listener;
+        private boolean isSelfApp = true;
 
         public RecordQueryAsyncTask(RecordQueryListener listener) {
             this.listener = listener;
+        }
+
+        public RecordQueryAsyncTask(RecordQueryListener listener, boolean isSelfApp) {
+            this.listener = listener;
+            this.isSelfApp = isSelfApp;
         }
 
         @Override
@@ -393,11 +415,16 @@ public class TracksServiceUtils {
                 } else {
                     tracks = myTracksProviderUtils.getAllTracks();
                 }
+
                 List<BasicRecordBean> basicRecordBean = new ArrayList<>();
                 for (Track track : tracks) {
                     // current only get navigation track
                     // if (track.getTrackType() == 1) {
-                    if (appId.equals(track.appId)) {
+                    if (isSelfApp) {
+                        if (appId.equals(track.appId)) {
+                            basicRecordBean.add(track);
+                        }
+                    } else {
                         basicRecordBean.add(track);
                     }
                     // }
@@ -416,4 +443,79 @@ public class TracksServiceUtils {
             }
         }
     }
+
+    /**
+     * 根据轨迹ID获取此条轨迹的边界经纬度值
+     *
+     * @param trackId 轨迹ID
+     * @return 轨迹边界，顺序为左上右下，地理上为西北东南
+     */
+    public double[] getTrackEdge(long trackId) {
+        double[] edge = new double[4];
+        int left = 180000000;
+        int top = -85051128;
+        int right = -180000000;
+        int bottom = 85051128;
+        Cursor cursor = myTracksProviderUtils.getTrackPointCursor(trackId, -1, -1, false);
+        ArrayList<Location> locations = new ArrayList<Location>();
+        while (cursor.moveToNext()) {
+            int lat = cursor.getInt(cursor.getColumnIndex(TrackPointsColumns.LATITUDE));
+            int lon = cursor.getInt(cursor.getColumnIndex(TrackPointsColumns.LONGITUDE));
+            if (left > lon) {
+                left = lon;
+            }
+            if (top < lat) {
+                top = lat;
+            }
+            if (right < lon) {
+                right = lon;
+            }
+            if (bottom > lat) {
+                bottom = lat;
+            }
+        }
+
+        edge[0] = left / 1E6D;
+        edge[1] = top / 1E6D;
+        edge[2] = right / 1E6D;
+        edge[3] = bottom / 1E6D;
+
+        return edge;
+    }
+
+    /**
+     * 根据轨迹ID获取此条轨迹的所有定位点
+     *
+     * @param trackId 轨迹ID
+     */
+    public ArrayList<Location> getTrackPoints(long trackId) {
+        return getTrackPoints(trackId, -1);
+    }
+
+    /**
+     * 根据轨迹ID获取此条轨迹的所有定位点
+     *
+     * @param trackId           轨迹ID
+     * @param startTrackPointId 该轨迹起始定位点在轨迹点表中的ID，不想使用传-1
+     * @return
+     */
+    public ArrayList<Location> getTrackPoints(long trackId, long startTrackPointId) {
+        Cursor cursor = myTracksProviderUtils.getTrackPointCursor(trackId, -1, -1, false);
+        ArrayList<Location> locations = new ArrayList<Location>();
+        // ArrayList<Location> locations = mTrack.getLocations();
+        while (cursor.moveToNext()) {
+            // int trackId =
+            // cursor.getInt(cursor.getColumnIndex(TrackPointsColumns.TRACKID));
+            int lat = cursor.getInt(cursor.getColumnIndex(TrackPointsColumns.LATITUDE));
+            int lon = cursor.getInt(cursor.getColumnIndex(TrackPointsColumns.LONGITUDE));
+            int time = cursor.getInt(cursor.getColumnIndex(TrackPointsColumns.TIME));
+            Location location = new Location("gps");
+            location.setLatitude(lat / 1E6D);
+            location.setLongitude(lon / 1E6D);
+            location.setTime(time);
+            locations.add(location);
+        }
+        return locations;
+    }
+
 }
