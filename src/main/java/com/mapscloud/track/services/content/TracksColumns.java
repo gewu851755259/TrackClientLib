@@ -221,4 +221,13 @@ public interface TracksColumns extends BaseColumns {
             ContentTypeIds.STRING_TYPE_ID, ContentTypeIds.INT_TYPE_ID // shared
             // owner
     };
+
+    /**
+     * 轨迹表增加是哪个app记录轨迹的字段语句
+     */
+    String ADD_APP_ID_COLUMN = "ALTER TABLE " + TABLE_NAME
+            + " ADD COLUMN " + COLUMN_APP_ID + " varchar(100) default '';";
+    String ADD_APP_NAME_COLUMN = "ALTER TABLE " + TABLE_NAME
+            + " ADD COLUMN " + COLUMN_APP_NAME + " varchar(100) default '';";
+
 }

@@ -55,13 +55,14 @@ import java.util.ArrayList;
  */
 public class MyTracksProvider extends ContentProvider {
 
-    private static final String TAG                   = MyTracksProvider.class.getSimpleName();
-    private static final int    DATABASE_VERSION      = 0;
-    public static final  String DRIVE_ID_TRACKS_QUERY = TracksColumns.DRIVEID + " IS NOT NULL AND "
+    private static final String TAG = MyTracksProvider.class.getSimpleName();
+
+    // 轨迹记录的数据库版本
+    private static final int TRACK_RECORD_DATABASE_VERSION = 2;
+    public static final String DRIVE_ID_TRACKS_QUERY = TracksColumns.DRIVEID + " IS NOT NULL AND "
             + TracksColumns.DRIVEID + "!=''";
 
-
-    private        File sdcardDir;
+    private File sdcardDir;
     private static File databaseFile;
 
     /**
@@ -74,9 +75,9 @@ public class MyTracksProvider extends ContentProvider {
         TRACKPOINTS, TRACKPOINTS_ID, TRACKS, TRACKS_ID, WAYPOINTS, WAYPOINTS_ID
     }
 
-//    private final UriMatcher     uriMatcher;
+    //    private final UriMatcher     uriMatcher;
     private UriMatcher uriMatcher;
-    private       SQLiteDatabase db;
+    private SQLiteDatabase db;
 
     // yml 为了可以传网络库，抽取使用包名的变量在下面
     private String authority = "";
@@ -168,22 +169,7 @@ public class MyTracksProvider extends ContentProvider {
         TRACKPOINTS_CONTENT_URI = Uri.parse("content://" + authority + "/trackpoints");
         WAYPOINTS_CONTENT_URI = Uri.parse("content://" + authority + "/waypoints");
 
-        Log.e(TAG, "Provider onCreate方法  db 是否为空：" + (db == null));
-        try {
-            // yml 这里可能因为mapplus/app/app.db文件不存在而导致db对象为空，所以在构造方法中判断文件为空情况创建文件
-            db = SQLiteDatabase.openDatabase(databaseFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READWRITE);
-            db.execSQL(TrackPointsColumns.CREATE_TABLE);
-            db.execSQL(TracksColumns.CREATE_TABLE);
-            db.execSQL(WaypointsColumns.CREATE_TABLE);
-        } catch (SQLiteException e) {
-            e.printStackTrace();
-            Log.e(TAG, "Provider onCreate方法 Unable to open database for writing. SQLiteException = " + e.getMessage());
-        } catch (Exception e) {
-            e.printStackTrace();
-            Log.e(TAG, "Provider onCreate方法 Unable to open database for writing.Exception = " + e.getMessage());
-        }
-        Log.e(TAG, "Provider onCreate方法 db 是否为空：" + (db == null));
-        return db != null;
+        return checkDBNotNull();
     }
 
     @Override
@@ -191,7 +177,7 @@ public class MyTracksProvider extends ContentProvider {
         if (!canAccess()) {
             return 0;
         }
-        String  table;
+        String table;
         boolean shouldVacuum = false;
         switch (getUrlType(url)) {
             case TRACKPOINTS:
@@ -209,7 +195,7 @@ public class MyTracksProvider extends ContentProvider {
         }
 
         boolean driveSync = false;
-        String  driveIds  = "";
+        String driveIds = "";
         if (table.equals(TracksColumns.TABLE_NAME)) {
             driveSync = PreferencesUtils.getBoolean(getContext(), R.string.drive_sync_key,
                     PreferencesUtils.DRIVE_SYNC_DEFAULT);
@@ -345,7 +331,7 @@ public class MyTracksProvider extends ContentProvider {
             return null;
         }
         SQLiteQueryBuilder queryBuilder = new SQLiteQueryBuilder();
-        String             sortOrder    = null;
+        String sortOrder = null;
         switch (getUrlType(url)) {
             case TRACKPOINTS:
                 queryBuilder.setTables(TrackPointsColumns.TABLE_NAME);
@@ -492,9 +478,9 @@ public class MyTracksProvider extends ContentProvider {
      * @param values the content values
      */
     private Uri insertTrackPoint(Uri url, ContentValues values) {
-        boolean hasLatitude  = values.containsKey(TrackPointsColumns.LATITUDE);
+        boolean hasLatitude = values.containsKey(TrackPointsColumns.LATITUDE);
         boolean hasLongitude = values.containsKey(TrackPointsColumns.LONGITUDE);
-        boolean hasTime      = values.containsKey(TrackPointsColumns.TIME);
+        boolean hasTime = values.containsKey(TrackPointsColumns.TIME);
         if (!hasLatitude || !hasLongitude || !hasTime) {
             throw new IllegalArgumentException("Latitude, longitude, and time values are required.");
         }
@@ -513,7 +499,7 @@ public class MyTracksProvider extends ContentProvider {
      */
     private Uri insertTrack(Uri url, ContentValues contentValues) {
         boolean hasStartTime = contentValues.containsKey(TracksColumns.STARTTIME);
-        boolean hasStartId   = contentValues.containsKey(TracksColumns.STARTID);
+        boolean hasStartId = contentValues.containsKey(TracksColumns.STARTID);
         if (!hasStartTime || !hasStartId) {
             throw new IllegalArgumentException("Both start time and start id values are required.");
         }
@@ -553,7 +539,7 @@ public class MyTracksProvider extends ContentProvider {
      */
     private String getDriveIds(String[] projection, String where, String[] selectionArgs) {
         ArrayList<String> driveIds = new ArrayList<String>();
-        Cursor            cursor   = null;
+        Cursor cursor = null;
         try {
             cursor = query(MyTracksProvider.TRACKS_CONTENT_URI, projection, where, selectionArgs, null);
             if (cursor != null && cursor.moveToFirst()) {
@@ -583,7 +569,6 @@ public class MyTracksProvider extends ContentProvider {
         Log.e(TAG, "provider checkDBNotNull方法 db 是否为空：" + (db == null));
         if (db == null || !databaseFile.exists()) {
             try {
-
                 // yml 这里可能因为mapplus/app/app.db文件不存在，先保证文件存在
                 if (!databaseFile.exists()) {
                     File parentFile = databaseFile.getParentFile();
@@ -594,9 +579,28 @@ public class MyTracksProvider extends ContentProvider {
 
                 // yml app.db文件存在后db对象一般不会为空
                 db = SQLiteDatabase.openDatabase(databaseFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READWRITE);
-                db.execSQL(TrackPointsColumns.CREATE_TABLE);
-                db.execSQL(TracksColumns.CREATE_TABLE);
-                db.execSQL(WaypointsColumns.CREATE_TABLE);
+                if (db != null) {
+                    LogUtils.e(Constant.TAG, "当前数据库版本 checkDBNotNull 开始 = " + db.getVersion());
+                    db.execSQL(TrackPointsColumns.CREATE_TABLE);
+                    db.execSQL(TracksColumns.CREATE_TABLE);
+                    db.execSQL(WaypointsColumns.CREATE_TABLE);
+                    if (TRACK_RECORD_DATABASE_VERSION > db.getVersion()) {
+                        db.beginTransaction();
+                        try {
+                            db.setTransactionSuccessful();
+                            db.execSQL(TracksColumns.ADD_APP_ID_COLUMN);
+                            db.execSQL(TracksColumns.ADD_APP_NAME_COLUMN);
+                            db.setVersion(TRACK_RECORD_DATABASE_VERSION);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            throw new IOException(e.getLocalizedMessage());
+                        } finally {
+                            db.endTransaction();
+                        }
+                    }
+                } else {
+                    throw new NullPointerException("打开轨迹记录数据库失败");
+                }
             } catch (SQLiteException e) {
                 e.printStackTrace();
                 Log.e(TAG, "provider checkDBNotNull方法 Unable to open database for writing. SQLiteException = " + e.getMessage());
@@ -605,8 +609,8 @@ public class MyTracksProvider extends ContentProvider {
                 Log.e(TAG, "provider checkDBNotNull方法 Unable to open database for writing. Exception = " + e.getMessage());
             }
         }
-        if (db != null){
-            LogUtils.e(Constant.TAG, "当前数据库版本 = " + db.getVersion());
+        if (db != null) {
+            LogUtils.e(Constant.TAG, "当前数据库版本 checkDBNotNull 最后 = " + db.getVersion());
         }
 
         return db != null;
