@@ -10,9 +10,7 @@ import android.os.AsyncTask;
 import android.os.RemoteException;
 import android.text.TextUtils;
 import android.util.Log;
-import android.widget.Toast;
 
-import com.dtt.app.area.Mercator;
 import com.mapscloud.track.R;
 import com.mapscloud.track.android.interfaces.TowerListener;
 import com.mapscloud.track.services.basic.BasicRecordBean;
@@ -457,10 +455,13 @@ public class TracksServiceUtils {
         int right = -180000000;
         int bottom = 85051128;
         Cursor cursor = myTracksProviderUtils.getTrackPointCursor(trackId, -1, -1, false);
-        ArrayList<Location> locations = new ArrayList<Location>();
         while (cursor.moveToNext()) {
             int lat = cursor.getInt(cursor.getColumnIndex(TrackPointsColumns.LATITUDE));
             int lon = cursor.getInt(cursor.getColumnIndex(TrackPointsColumns.LONGITUDE));
+            if (lat > 85051128 || lat < -85051128
+                    || lon > 180000000 || lon < -180000000) {
+                continue;
+            }
             if (left > lon) {
                 left = lon;
             }

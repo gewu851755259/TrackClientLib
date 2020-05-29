@@ -16,12 +16,10 @@
 
 package com.mapscloud.track.services.provider;
 
-import android.annotation.SuppressLint;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 import android.location.Location;
 import android.net.Uri;

@@ -16,14 +16,14 @@
 
 package com.mapscloud.track.services.content;
 
+import android.util.Log;
+
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
-
-import android.util.Log;
 
 /**
  * Manages register/unregister {@link TrackDataListener} and keeping the state

@@ -15,14 +15,14 @@
  */
 package com.mapscloud.track.services.utils;
 
-import java.util.ArrayList;
-import java.util.Stack;
-
 import android.location.Location;
+import android.util.Log;
 
 import com.mapscloud.track.services.content.Track;
 import com.mapscloud.track.services.tracks.UnitConversions;
-import android.util.Log;
+
+import java.util.ArrayList;
+import java.util.Stack;
 
 /**
  * Utility class for decimating tracks at a given level of precision.

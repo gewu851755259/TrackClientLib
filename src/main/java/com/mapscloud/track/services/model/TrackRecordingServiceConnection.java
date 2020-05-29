@@ -26,11 +26,11 @@ import android.os.IBinder;
 import android.os.IBinder.DeathRecipient;
 import android.os.Message;
 import android.os.RemoteException;
+import android.util.Log;
 import android.widget.Toast;
 
 import com.mapscloud.track.BuildConfig;
 import com.mapscloud.track.services.utils.Constant;
-import android.util.Log;
 
 /**
  * Wrapper for the track recording service. This handles service

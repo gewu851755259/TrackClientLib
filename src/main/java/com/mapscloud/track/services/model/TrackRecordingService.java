@@ -46,6 +46,7 @@ import androidx.core.app.NotificationCompat;
 import androidx.core.app.TaskStackBuilder;
 
 import com.amap.api.location.AMapLocation;
+import com.dtt.app.custom.utils.ToastUtils;
 import com.dtt.signal.SignalManager1;
 import com.mapscloud.track.R;
 import com.mapscloud.track.services.content.DescriptionGeneratorImpl;
@@ -1374,6 +1375,13 @@ public class TrackRecordingService extends Service {
                     double lng = ((AMapLocation) location).getLongitude();
                     float bearing = ((AMapLocation) location).getBearing();
 
+                    // 错误时其实无法回调到这里，这里打印其实没啥作用
+                    int errorCode = ((AMapLocation) location).getErrorCode();
+                    if (errorCode != 0) {
+                        String error = ((AMapLocation) location).getLocationDetail();
+                        Timber.e("高德定位错误: %s", error);
+                    }
+
                     Location androidLocation = new Location(provider);
                     androidLocation.setLatitude(lat);
                     androidLocation.setLongitude(lng);
@@ -1382,7 +1390,7 @@ public class TrackRecordingService extends Service {
                 } else {
                     distanceToLastTrackLocation = location.distanceTo(lastValidTrackPoint);
                 }
-                Timber.e("%s 定位点信息，lat = %f， lon = %f, 距上次定位点距离 = %f", appId,
+                Timber.i("%s 定位点信息，lat = %f， lon = %f, 距上次定位点距离 = %f", appId,
                         location.getLatitude(), location.getLongitude(), distanceToLastTrackLocation);
                 if (distanceToLastTrackLocation < minRecordingDistance
                         && sensorDataSet == null) {

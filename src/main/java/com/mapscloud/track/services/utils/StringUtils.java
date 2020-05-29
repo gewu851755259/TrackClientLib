@@ -15,14 +15,6 @@
  */
 package com.mapscloud.track.services.utils;
 
-import java.text.ParsePosition;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
-import java.util.TimeZone;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import android.content.Context;
 import android.text.Html;
 import android.text.Spanned;
@@ -31,6 +23,14 @@ import android.text.format.DateUtils;
 
 import com.mapscloud.track.R;
 import com.mapscloud.track.services.tracks.UnitConversions;
+
+import java.text.ParsePosition;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+import java.util.TimeZone;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Various string manipulation methods.

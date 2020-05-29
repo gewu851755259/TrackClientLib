@@ -20,7 +20,6 @@ import android.location.Location;
 import android.os.Parcel;
 import android.os.Parcelable;
 
-
 import com.mapscloud.track.services.basic.BasicRecordBean;
 
 import java.util.ArrayList;
