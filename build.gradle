@@ -65,8 +65,10 @@ android {
 
 dependencies {
     implementation "androidx.appcompat:appcompat:1.1.0"
-    // 用于Sensor的一个google jar包
+    // 一个google jar包，用于序列化和反序列化Sensor.java，Sensor应该是通过.proto文件自动生成放入代码中的
     api files("libs/protobuf-java-2.3.0-lite.jar")
+
+
     // 日志打印
     implementation 'com.jakewharton.timber:timber:4.7.1'
 
