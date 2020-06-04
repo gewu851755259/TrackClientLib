@@ -462,6 +462,7 @@ public class TracksServiceUtils {
                     || lon > 180000000 || lon < -180000000) {
                 continue;
             }
+
             if (left > lon) {
                 left = lon;
             }

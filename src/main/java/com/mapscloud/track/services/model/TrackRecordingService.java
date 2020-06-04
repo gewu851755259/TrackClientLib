@@ -46,7 +46,6 @@ import androidx.core.app.NotificationCompat;
 import androidx.core.app.TaskStackBuilder;
 
 import com.amap.api.location.AMapLocation;
-import com.dtt.app.custom.utils.ToastUtils;
 import com.dtt.signal.SignalManager1;
 import com.mapscloud.track.R;
 import com.mapscloud.track.services.content.DescriptionGeneratorImpl;
@@ -68,6 +67,12 @@ import com.mapscloud.track.services.utils.LocationUtils;
 import com.mapscloud.track.services.utils.PreferencesUtils;
 import com.mapscloud.track.services.utils.TrackNameUtils;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
@@ -75,7 +80,13 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+import okhttp3.WebSocket;
+import okhttp3.WebSocketListener;
 import timber.log.Timber;
 
 
@@ -531,6 +542,7 @@ public class TrackRecordingService extends Service {
 
             // This should be the next to last operation
             releaseWakeLock();
+            stopHeartbeatTask(true);
 
             /*
              * Shutdown the executor service last to avoid sending events to a dead
@@ -748,6 +760,13 @@ public class TrackRecordingService extends Service {
                 * ONE_MINUTE;
     }
 
+    /**
+     * 开始轨迹记录
+     *
+     * @param appId   开始记录的app包名
+     * @param appName 开始记录的app名字
+     * @return 轨迹记录ID
+     */
     private long startNewTrackWithAppInfo(String appId, String appName) {
         if (isRecording(appId)) {
             return -1L;
@@ -933,6 +952,7 @@ public class TrackRecordingService extends Service {
      */
     private void startRecording(boolean trackStarted) {
         acquireWakeLock();
+        startHeartbeatTask();
 
         // Update instance variables
         sensorManager = SensorManagerFactory.getSystemSensorManager(this);
@@ -960,6 +980,7 @@ public class TrackRecordingService extends Service {
 
     private void startRecording(boolean trackStarted, String appId) {
         acquireWakeLock();
+        startHeartbeatTask();
 
         // Update instance variables
         sensorManager = SensorManagerFactory.getSystemSensorManager(this);
@@ -1015,6 +1036,11 @@ public class TrackRecordingService extends Service {
         stopSelf();
     }
 
+    /**
+     * 结束轨迹记录
+     *
+     * @param appId 结束轨迹记录的app包名
+     */
     private void endCurrentTrack(String appId) {
         if (!isVaildTrackId(appId)) {
             Timber.e("%s 结束轨迹时，轨迹ID = -1，轨迹无效", appId);
@@ -1153,6 +1179,7 @@ public class TrackRecordingService extends Service {
                             : R.string.track_paused_broadcast_action, trackId);
 
             releaseWakeLock();
+            stopHeartbeatTask(true);
         }
     }
 
@@ -1390,8 +1417,9 @@ public class TrackRecordingService extends Service {
                 } else {
                     distanceToLastTrackLocation = location.distanceTo(lastValidTrackPoint);
                 }
-                Timber.i("%s 定位点信息，lat = %f， lon = %f, 距上次定位点距离 = %f", appId,
-                        location.getLatitude(), location.getLongitude(), distanceToLastTrackLocation);
+                Timber.i("%s 定位点信息，provider = %s, lat = %f， lon = %f, 距上次定位点距离 = %f",
+                        appId, location.getProvider(), location.getLatitude(),
+                        location.getLongitude(), distanceToLastTrackLocation);
                 if (distanceToLastTrackLocation < minRecordingDistance
                         && sensorDataSet == null) {
                     Timber.e("%s 距离小于 %d，不保存定位点", appId, minRecordingDistance);
@@ -1992,5 +2020,81 @@ public class TrackRecordingService extends Service {
 
         context.getPackageManager().setComponentEnabledSetting(serviceComp, newState, PackageManager.DONT_KILL_APP);
     }
+
+
+    /*********** 心跳长链接 START ***********/
+    private WebSocket webSocket;
+    private static final int CONNECTION_TIMEOUT = 20 * 1000; // 20 secs in ms
+    private boolean isManualCloseWebSocket = false;
+    private Runnable heartbeatTask = new Runnable() {
+        @Override
+        public void run() {
+            //新建client
+            OkHttpClient client = new OkHttpClient.Builder()
+                    .connectTimeout(CONNECTION_TIMEOUT, TimeUnit.MILLISECONDS)
+                    .build();
+            //构造request对象
+            Request request = new Request.Builder()
+                    .url("ws://114.116.142.50:6010")
+//                    .url("ws://echo.websocket.org")
+                    .build();
+            //建立连接
+            client.newWebSocket(request, new WebSocketListener() {
+                @Override
+                public void onOpen(WebSocket webSocket, Response response) {
+                    super.onOpen(webSocket, response);
+                    Timber.d("WebSocket 打开成功：%s", response.toString());
+                    TrackRecordingService.this.webSocket = webSocket;
+                    handler.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (!isManualCloseWebSocket) {
+                                startHeartbeatTask(); // 长链接销毁30秒后重新创建
+                            }
+                        }
+                    }, 5 * 60 * 1000);// 长链接建立5分钟后销毁
+                }
+
+                @Override
+                public void onFailure(WebSocket webSocket, Throwable t, Response response) {
+                    super.onFailure(webSocket, t, response);
+                    Timber.d("WebSocket 打开失败：%s", t.getMessage());
+                    if (!isManualCloseWebSocket) {
+                        startHeartbeatTask(); // 如果打开WebSocket失败，30秒后重连
+                    }
+                }
+
+                @Override
+                public void onMessage(WebSocket webSocket, String text) {
+                    super.onMessage(webSocket, text);
+                    Timber.d("WebSocket 接收消息：%s", text);
+                }
+
+                @Override
+                public void onClosed(WebSocket webSocket, int code, String reason) {
+                    super.onClosed(webSocket, code, reason);
+                    Timber.d("WebSocket 关闭成功，code = %d，reason = %s", code, reason);
+                    if (!isManualCloseWebSocket) {
+                        startHeartbeatTask(); // 如果打开WebSocket失败，30秒后重连
+                    }
+                }
+            });
+        }
+    };
+
+    private void startHeartbeatTask() {
+        stopHeartbeatTask(false);
+        handler.postDelayed(heartbeatTask, 30 * 1000);
+    }
+
+    private void stopHeartbeatTask(boolean isManualCloseWebSocket) {
+        TrackRecordingService.this.isManualCloseWebSocket = isManualCloseWebSocket;
+        handler.removeCallbacks(heartbeatTask);
+        if (webSocket != null) {
+            webSocket.close(3954, "长链接5分钟一次的断开，30秒后再开启");
+            webSocket.cancel();
+        }
+    }
+    /*********** 心跳长链接 END ***********/
 
 }

@@ -80,7 +80,7 @@ public class PreferencesUtils {
     public static final int MIN_RECORDING_INTERVAL_DEFAULT = 0;
 
     // Values for min_required_accuracy
-    public static final int MIN_REQUIRED_ACCURACY_DEFAULT = 30;
+    public static final int MIN_REQUIRED_ACCURACY_DEFAULT = 50;
     public static final int MIN_REQUIRED_ACCURACY_EXCELLENT = 10;
     public static final int MIN_REQUIRED_ACCURACY_POOR = 5000;
 
