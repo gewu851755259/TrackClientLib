@@ -16,6 +16,7 @@ import com.mapscloud.track.android.interfaces.TowerListener;
 import com.mapscloud.track.services.basic.BasicRecordBean;
 import com.mapscloud.track.services.content.Track;
 import com.mapscloud.track.services.content.TrackPointsColumns;
+import com.mapscloud.track.services.content.TripStatistics;
 import com.mapscloud.track.services.model.ITrackRecordingService;
 import com.mapscloud.track.services.model.TrackRecordingServiceConnectionUtils;
 import com.mapscloud.track.services.model.Waypoint;
@@ -450,38 +451,14 @@ public class TracksServiceUtils {
      */
     public double[] getTrackEdge(long trackId) {
         double[] edge = new double[4];
-        int left = 180000000;
-        int top = -85051128;
-        int right = -180000000;
-        int bottom = 85051128;
-        Cursor cursor = myTracksProviderUtils.getTrackPointCursor(trackId, -1, -1, false);
-        while (cursor.moveToNext()) {
-            int lat = cursor.getInt(cursor.getColumnIndex(TrackPointsColumns.LATITUDE));
-            int lon = cursor.getInt(cursor.getColumnIndex(TrackPointsColumns.LONGITUDE));
-            if (lat > 85051128 || lat < -85051128
-                    || lon > 180000000 || lon < -180000000) {
-                continue;
-            }
-
-            if (left > lon) {
-                left = lon;
-            }
-            if (top < lat) {
-                top = lat;
-            }
-            if (right < lon) {
-                right = lon;
-            }
-            if (bottom > lat) {
-                bottom = lat;
-            }
+        Track track = getTrackWithId(trackId);
+        if (track != null){
+            TripStatistics trip = track.getTripStatistics();
+            edge[0] = trip.getLeftDegrees();
+            edge[1] = trip.getTopDegrees();
+            edge[2] = trip.getRightDegrees();
+            edge[3] = trip.getBottomDegrees();
         }
-
-        edge[0] = left / 1E6D;
-        edge[1] = top / 1E6D;
-        edge[2] = right / 1E6D;
-        edge[3] = bottom / 1E6D;
-
         return edge;
     }
 
@@ -518,6 +495,15 @@ public class TracksServiceUtils {
             locations.add(location);
         }
         return locations;
+    }
+
+
+    public void deleteAllTrack() {
+        myTracksProviderUtils.deleteAllTracks();
+    }
+
+    public void deleteTrackWithID(long trackId) {
+        myTracksProviderUtils.deleteTrack(trackId);
     }
 
 }
