@@ -73,7 +73,7 @@ dependencies {
     implementation 'com.jakewharton.timber:timber:4.7.1'
 
     //TODO
-//    api project(':BaseAppLib')
-    api 'com.mapscloud.baseapp:base-app-lib:1.0.25'
+    api project(':BaseAppLib')
+//    api 'com.mapscloud.baseapp:base-app-lib:1.0.25'
 
 }
